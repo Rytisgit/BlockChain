@@ -168,6 +168,36 @@ void reinsertUnusedTransactions(std::vector<Transaction> &transactionsForBlockb,
     transactions.insert(end(transactions), begin(transactionsForBlocke), begin(transactionsForBlocke));
 }
 
+int getNewBlockNonce(std::vector<Transaction> &newtransactions, int size, int difficulty, int startIndex,
+                     int searchMultiplier) {
+    auto transactionsForBlocka = getTransactionsForBlock(newtransactions, size);
+    auto transactionsForBlockb = getTransactionsForBlock(newtransactions, size);
+    auto transactionsForBlockc = getTransactionsForBlock(newtransactions, size);
+    auto transactionsForBlockd = getTransactionsForBlock(newtransactions, size);
+    auto transactionsForBlocke = getTransactionsForBlock(newtransactions, size);
+    int nonce =-1;
+    while(nonce == -1){
+            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlocka);
+            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlockb, transactionsForBlockc, transactionsForBlockd, transactionsForBlocke);continue;}
+
+            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlockb);
+            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlocka, transactionsForBlockc, transactionsForBlockd, transactionsForBlocke); continue;}
+
+            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlockc);
+            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlockb, transactionsForBlocka, transactionsForBlockd, transactionsForBlocke); continue;}
+
+            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlockd);
+            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlockb, transactionsForBlockc, transactionsForBlocka, transactionsForBlocke); continue;}
+
+            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlocke);
+            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlockb, transactionsForBlockc, transactionsForBlockd, transactionsForBlocka); continue;}
+            searchMultiplier++;
+        }
+    searchMultiplier= 1;//prabandyti 5 tranakciju setai, padidinam paieska
+
+    return nonce;
+}
+
 int main() {
     for (int i = 0; i < 100; ++i) {
         auto person = new Person(randommoney(rg),random_string(8),random_string(52));
@@ -200,30 +230,7 @@ int main() {
     blockChain.push_back(*firstBock);
 
     for (int j = 0; j < 5; ++j) {
-        auto transactionsForBlocka = getTransactionsForBlock(newtransactions, size);
-        auto transactionsForBlockb = getTransactionsForBlock(newtransactions, size);
-        auto transactionsForBlockc = getTransactionsForBlock(newtransactions, size);
-        auto transactionsForBlockd = getTransactionsForBlock(newtransactions, size);
-        auto transactionsForBlocke = getTransactionsForBlock(newtransactions, size);
-        int nonce =-1;
-        while(nonce == -1){
-            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlocka);
-            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlockb, transactionsForBlockc, transactionsForBlockd, transactionsForBlocke);continue;}
-
-            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlockb);
-            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlocka, transactionsForBlockc, transactionsForBlockd, transactionsForBlocke); continue;}
-
-            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlockc);
-            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlockb, transactionsForBlocka, transactionsForBlockd, transactionsForBlocke); continue;}
-
-            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlockd);
-            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlockb, transactionsForBlockc, transactionsForBlocka, transactionsForBlocke); continue;}
-
-            nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlocke);
-            if(nonce != -1) {reinsertUnusedTransactions(transactionsForBlockb, transactionsForBlockc, transactionsForBlockd, transactionsForBlocka); continue;}
-            searchMultiplier++;
-        }
-        searchMultiplier= 1;//prabandyti 5 tranakciju setai, padidinam paieska
+        int nonce = getNewBlockNonce(newtransactions, size, difficulty, startIndex, searchMultiplier);
 
         blockChain.push_back(*new Block(hashBlock(blockChain.back()), MerkleRoot(transactionsForBlock),difficulty,nonce,transactionsForBlock));
     }
