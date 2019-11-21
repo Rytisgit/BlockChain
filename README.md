@@ -1,5 +1,5 @@
 # BlockChain
-blokchain based on hashing from hashing repository
+Blokchain based on hashing from hashing repository
 
 ## Implementation
 
@@ -13,7 +13,7 @@ Uses 5 different sets of 100 transaction to mine for a correct hash.
 
 #### Compilation
 
-`g++ -O3 main.cpp -o hashing`
+`g++ -O3 main.cpp -o Blockhain`
 
 ### Output
 
