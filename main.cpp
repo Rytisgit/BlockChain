@@ -146,8 +146,8 @@ int main() {
     blockChain.back();
     for (int j = 0; j < 5; ++j) {
         newtransactions = generateTransactions();
-        auto nonce = generateBlock(blockChain.back().prevhash,difficulty,startIndex,searchMultiplier,newtransactions);
-        auto block = new Block(blockChain.back().prevhash, MerkleRoot(newtransactions),time,difficulty,correctNonce,newtransactions);
+        auto nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,newtransactions);
+        auto block = new Block(hashBlock(blockChain.back()), MerkleRoot(newtransactions),time,difficulty,correctNonce,newtransactions);
         blockChain.push_back(*block);
     }
 
