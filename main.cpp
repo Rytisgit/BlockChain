@@ -14,6 +14,8 @@ thread_local static std::uniform_int_distribution<int> pick(0, goodCharsLength-1
 thread_local static std::uniform_int_distribution<int> randommoney(100, 10000);
 thread_local static std::uniform_int_distribution<int> person(0, 99);
 thread_local static std::uniform_int_distribution<int> amount(1, 100);
+std::chrono::high_resolution_clock Timer = std::chrono::high_resolution_clock();
+long long static getTime(){ return Timer.now().time_since_epoch().count();}
 std::string random_string( size_t length )
 {
     auto randchar = []() -> char {return goodChars[pick(rg)];};
@@ -39,20 +41,23 @@ public:
         amount = mon;
         from = s;
         to = d;
+        timestamp = getTime();
+        this->hash = HASHING_RYTISMASTERCLASSONHASHINGALGORITHMS_H::hash(std::to_string(mon) + s + d + std::to_string(timestamp));
     }
     int amount;
+    long long timestamp;
     std::string from;
     std::string to;
+    std::string hash;
 };
 
 class Block{
 public:
-    Block(std::string prevhash, std::string merkel, std::string timestamp,int diff, int nonce, std::vector<Transaction> b){
+    Block(std::string prevhash, std::string merkel,int diff, int nonce, std::vector<Transaction> b){
         transactions = b;
         this->prevhash = prevhash;
         this->merkel = merkel;
-        auto a = std::chrono::high_resolution_clock();
-        this->timestamp = a.now().time_since_epoch().count();
+        this->timestamp = getTime();
         this->diff = diff;
         this->nonce = nonce;
     }
@@ -86,15 +91,21 @@ std::string MerkleRoot(std::vector<Transaction> transactions){
 }
 std::vector<Person> people;
 
+
 std::vector<Transaction> transactions;
 
 std::vector<Transaction> generateTransactions(){
     std::vector<Transaction> transactions;
     for (int i = 0; i < 10000; ++i) {
-        auto person1 = person(rg);
-        auto person2 = person(rg);
-        while(person1 == person2) person2 = person(rg);
-        auto transaction = new Transaction(amount(rg),people.at(person1).name, people.at(person2).name);
+        auto sender = person(rg);
+        auto receiver = person(rg);
+        while(sender == receiver) receiver = person(rg);
+        auto money = amount(rg);
+        if(people.at(sender).money < money){ // check if has sufficient funds
+            --i;
+            continue;
+        }
+        auto transaction = new Transaction(money, people.at(sender).name, people.at(receiver).name);
         transactions.push_back(*transaction);
     }
     return transactions;
@@ -121,6 +132,30 @@ std::string hashBlock(Block block){
     full << block.prevhash << block.merkel << block.nonce;
     return hash(full.str());
 }
+
+std::vector<Transaction> getTransactionsForBlock(std::vector<Transaction> &newtransactions, int size) {
+    std::vector<Transaction> transactionsForBlock;
+    for (int k = 0; k < size ; ++k) {
+        if(strncmp(newtransactions.at(k).hash.c_str(),
+                   hash(std::__cxx11::to_string(newtransactions.at(k).amount)
+                        + newtransactions.at(k).from
+                        + newtransactions.at(k).to
+                        + std::__cxx11::to_string(newtransactions.at(k).timestamp)).c_str(), hashSize) != 0) // hashses dont match
+        {
+            newtransactions.erase(newtransactions.begin()+k);//remove bad input
+            --k;//get full amount
+            if(newtransactions.size()<100){//if too little left, reduce final output size
+                size = newtransactions.size();
+                continue;
+            }
+
+        }
+        transactionsForBlock.push_back(newtransactions.at(k));
+    }
+    newtransactions.erase(newtransactions.begin() + transactionsForBlock.size());
+    return transactionsForBlock;
+}
+
 int main() {
     for (int i = 0; i < 100; ++i) {
         auto person = new Person(randommoney(rg),random_string(8),random_string(52));
@@ -129,26 +164,34 @@ int main() {
 
     auto newtransactions = generateTransactions();
 
+
+    int size = 100;
+    if(newtransactions.size()<100){
+        size = newtransactions.size();
+    }
+
+    auto transactionsForBlock = getTransactionsForBlock(newtransactions, size);
+
+
+
     int difficulty = 2;
     int startIndex = 1;
     int searchMultiplier = 1;
 
 
 
-    std::time_t ticks = std::time(nullptr);
-    auto time  = std::asctime(std::localtime(&ticks));
-    int correctNonce = generateBlock("000000000000000000000000", difficulty, startIndex, searchMultiplier, newtransactions);
 
-    auto firstBock = new Block("000000000000000000000000", MerkleRoot(newtransactions),time,difficulty,correctNonce,newtransactions);
+    int correctNonce = generateBlock("000000000000000000000000", difficulty, startIndex, searchMultiplier, transactionsForBlock);
+
+    auto firstBock = new Block("000000000000000000000000", MerkleRoot(transactionsForBlock),difficulty,correctNonce,transactionsForBlock);
 
     blockChain.push_back(*firstBock);
 
     blockChain.back();
     for (int j = 0; j < 5; ++j) {
-        newtransactions = generateTransactions();
-        auto nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,newtransactions);
-        auto block = new Block(hashBlock(blockChain.back()), MerkleRoot(newtransactions),time,difficulty,correctNonce,newtransactions);
-        blockChain.push_back(*block);
+        transactionsForBlock = getTransactionsForBlock(newtransactions, size);
+        auto nonce = generateBlock(hashBlock(blockChain.back()),difficulty,startIndex,searchMultiplier,transactionsForBlock);
+        blockChain.push_back(*new Block(hashBlock(blockChain.back()), MerkleRoot(transactionsForBlock),difficulty,nonce,transactionsForBlock));
     }
 
     return 0;
